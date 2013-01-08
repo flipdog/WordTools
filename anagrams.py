@@ -1,13 +1,20 @@
 from time import time
 import re
 import itertools
-from Tree import Tree
 import cPickle as pickle
+import frequencies
 
 newest_letter_map = {'A': 2, 'C': 5, 'B': 3, 'E': 11, 'D': 7, 'G': 17, 'F': 13, 'I': 23, 'H': 19, 'K': 31, 'J': 29, 'M': 41, 'L': 37, 'O': 47, 'N': 43, 'Q': 59, 'P': 53, 'S': 67, 'R': 61, 'U': 73, 'T': 71, 'W': 83, 'V': 79, 'Y': 97, 'X': 89, 'Z': 101}
 
-class Anagrammer():
 
+def product(arr):
+    result = 1
+    for x in arr:
+        result *= x
+    return result
+
+
+class Anagrammer():
     def __init__(self, dictionary_file, letter_map):
         self.count = 0
         self.letter_map = letter_map
@@ -116,11 +123,12 @@ class Anagrammer():
                 assert target % product(hashes) == 0
                 remaining_hash = target / product(hashes)
                 for i in range(1, remaining_letters + 1):
-                    for val in possible_vals[i]:
-                        if remaining_hash % val == 0:
-                            new_hashes = tuple(sorted(hashes + (val,)))
-                            new_active_set.add((new_hashes, remaining_letters - i))
-                            mod = True
+                    if i in possible_vals:
+                        for val in possible_vals[i]:
+                            if remaining_hash % val == 0:
+                                new_hashes = tuple(sorted(hashes + (val,)))
+                                new_active_set.add((new_hashes, remaining_letters - i))
+                                mod = True
             active_set = new_active_set
             if not mod:
                 break
@@ -153,12 +161,31 @@ class Anagrammer():
             anagrams.append(tuple([self.value_dict[v] for v in s]))
         return anagrams
 
+    def all_anagram_phrases(self, word):
+        anagram_sets = self.all_anagrams(word)
+        all_phrases = []
+        for ana_set in anagram_sets:
+            for sorted_ana_set in itertools.permutations(ana_set):
+                phrases = [[]]
+                for anas in sorted_ana_set:
+                    new_phrases = []
+                    for p in phrases:
+                        for a in anas:
+                            new_phrases.append(p + [a])
+                    phrases = new_phrases
+                all_phrases.extend(phrases)
+        return all_phrases
+
+    def sorted_anagram_phrases(self, word):
+        phrases = self.all_anagram_phrases(word)
+        return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
 def main():
     s = time()
     an = Anagrammer('raw_data/sowpods.txt', newest_letter_map)
-    f = an.all_anagrams('ORANGEJUICEBOXES')
-    print len(f)
+    f = an.all_anagrams('ORANGES')
+    print time()-s
+    print f[:50]
     #for k in g:
     #    print k
     #writer = open('shakespeare_output.txt','w')
@@ -166,7 +193,6 @@ def main():
     #    writer.write(str(k)+'\n')
     #writer.close()
     #f.prettyTree()
-    print time()-s
     #an.dump_memo(an.memoization)
     return
 
@@ -226,10 +252,3 @@ def doubletrans(word):
         for letter in extension:
             extension_string = extension_string + letter
         transdeletion(word)
-
-
-def product(arr):
-    result = 1
-    for x in arr:
-        result *= x
-    return result
