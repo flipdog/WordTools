@@ -183,7 +183,7 @@ class Anagrammer():
 def main():
     s = time()
     an = Anagrammer('raw_data/sowpods.txt', newest_letter_map)
-    f = an.all_anagrams('ORANGES')
+    f = an.sorted_anagram_phrases('ORANGES')
     print time()-s
     print f[:50]
     #for k in g:
