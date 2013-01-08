@@ -1,13 +1,8 @@
-
-
-
 from time import time
 import re
 import itertools
-import math
 from Tree import Tree
 import cPickle as pickle
-import os
 
 newest_letter_map = {'A': 2, 'C': 5, 'B': 3, 'E': 11, 'D': 7, 'G': 17, 'F': 13, 'I': 23, 'H': 19, 'K': 31, 'J': 29, 'M': 41, 'L': 37, 'O': 47, 'N': 43, 'Q': 59, 'P': 53, 'S': 67, 'R': 61, 'U': 73, 'T': 71, 'W': 83, 'V': 79, 'Y': 97, 'X': 89, 'Z': 101}
 
@@ -38,7 +33,7 @@ class Anagrammer():
             return True
         except IOError:
             return False
-    
+
     def read_dictionary(self, FILE_NAME):
         reader = open(FILE_NAME,'r')
         for line in reader:
@@ -97,114 +92,39 @@ class Anagrammer():
             except KeyError:
                 pass
         return lst
-        
 
-    def update_sub_words(self,length,target):
+
+    def update_sub_words(self, length, target):
         sub_dict = {}
-        for i in range(length+1):
+        for i in range(length + 1):
             try:
                 for key in self.word_dict[i].keys():
-                    if target%key == 0:
-                        try:
-                            sub_dict[i].append(key)
-                        except KeyError:
-                            sub_dict[i] = []
-                            sub_dict[i].append(key)
+                    if target % key == 0:
+                        sub_dict.setdefault(i, []).append(key)
                 sub_dict[i].sort()
             except KeyError:
                 pass
         return sub_dict
 
-    # find all sets of hash keys that can make the target key
-    def subset(self,length,target):
-        active_dict = self.update_sub_words(length,target) # <0.04s every time
-        self.count = 0
-        return self.subset_recursive(length,target,1,active_dict,1)
-
-    def key_copy(self,inp_dict):
-        out = {}
-        for k,v in inp_dict.iteritems():
-            try:
-                out[k] = v[:]
-            except TypeError:
-                out[k] = v
-        return out
-                
-
-    # recursive helper for the previous function
-    def subset_recursive(self,remaining,current_target,passed_key,active_dict,depth):
-        self.count +=1
-        if passed_key == current_target:
-            if remaining == 0:
-                return Tree(self.value_dict[passed_key])
-            return None
-        if passed_key > current_target or remaining == 0:
-            return None
-        reduced_target = current_target / passed_key
-        try:
-            mem = self.memoization[reduced_target]
-            if mem == None:
-                return None
-            out = self.tree_copy(mem)
-            out.setCargo(self.value_dict[passed_key])
-            return out
-        except KeyError:
-            pass
-        branch = []
-        for size in range(2,remaining+1):
-            try:
-                for key in active_dict[size][:]:
-                    if key <= reduced_target and reduced_target%key == 0:
-                        if(remaining-size > size-1 or remaining-size == 0):
-                            x = self.subset_recursive(remaining-size,reduced_target,key,self.key_copy(active_dict),depth+1)
-                            if not  x == None:
-                                branch.append(x)
-                            active_dict[size].remove(key)
-                    if key > reduced_target:
-                        break
-            except KeyError:
-                pass
-        if len(branch) > 0:
-            try:
-                output = Tree(self.value_dict[passed_key],branch)
-            except KeyError:
-                output = Tree('',branch)
-        else:
-            output = None
-        self.memoization[reduced_target] = output
-        return output
-
-
-    def key_copy(self,inp_dict):
-        out = {}
-        for k,v in inp_dict.iteritems():
-            try:
-                out[k] = v[:]
-            except TypeError:
-                out[k] = v
-        return out
-
-    def traverse_tree(self,inp_tree):
-        self.complete_sets = []
-        self.traverse_tree_recursive(inp_tree,list())
-        return self.complete_sets
-
-    def traverse_tree_recursive(self,inp_tree,partial):
-        if not inp_tree.isRoot():
-            partial.append(inp_tree.getCargo())
-        if inp_tree.isBranch():
-            self.complete_sets.append(tuple(partial))
-            return
-        for child in inp_tree.getChildren():
-            self.traverse_tree_recursive(child,partial[:])
-        return
-
-    def tree_copy(self,src_tree):
-        new_tree = Tree(src_tree.data)
-        for child in src_tree.getChildren():
-            c = self.tree_copy(child)
-            new_tree.addChild(c)
-        return new_tree
+    def subset(self, length, target):
+        possible_vals = self.update_sub_words(length, target)
+        active_set = set([(tuple(), length)])
+        while True:
+            mod = False
+            new_active_set = set([s for s in active_set if s[1] == 0])
+            for hashes, remaining_letters in active_set:
+                assert target % product(hashes) == 0
+                remaining_hash = target / product(hashes)
+                for i in range(1, remaining_letters + 1):
+                    for val in possible_vals[i]:
+                        if remaining_hash % val == 0:
+                            new_hashes = tuple(sorted(hashes + (val,)))
+                            new_active_set.add((new_hashes, remaining_letters - i))
+                            mod = True
+            active_set = new_active_set
+            if not mod:
+                break
+        return [s[0] for s in active_set]
 
     # check if two words are anagrams - theoretically optimized
     # time is n+n+26 with usually small n
@@ -212,7 +132,7 @@ class Anagrammer():
     def is_anagram(self, word1, word2):
         letters = {'A': 0, 'C': 0, 'B': 0, 'E': 0, 'D': 0, 'G': 0, 'F': 0, 'I': 0, 'H': 0, 'K': 0, 'J': 0, 'M': 0, 'L': 0, 'O': 0, 'N': 0, 'Q': 0, 'P': 0, 'S': 0, 'R': 0, 'U': 0, 'T': 0, 'W': 0, 'V': 0, 'Y': 0, 'X': 0, 'Z': 0}
         if not len(word1) == len(word2):
-            return false
+            return False
         for letter in word1:
             letters[letter] += 1
         for letter in word2:
@@ -222,20 +142,21 @@ class Anagrammer():
                 return False
         return True
 
-    
-    def all_anagrams(self,word):
+    def all_anagrams(self, word):
         word = word.upper()
         word = re.sub(r'\s', '', word)
         value = self.word_value(word)
         length = len(word)
-        an_tree = self.subset(length,value)
-        an_list = self.traverse_tree(an_tree)
-        return an_list
-
+        hash_sets = self.subset(length, value)
+        anagrams = []
+        for s in hash_sets:
+            anagrams.append(tuple([self.value_dict[v] for v in s]))
+        return anagrams
 
 
 def main():
     s = time()
+    an = Anagrammer('raw_data/sowpods.txt', newest_letter_map)
     f = an.all_anagrams('ORANGEJUICEBOXES')
     print len(f)
     #for k in g:
@@ -249,10 +170,13 @@ def main():
     #an.dump_memo(an.memoization)
     return
 
+if __name__ == '__main__':
+    main()
+
 #import cProfile
 #cProfile.run('main()')
 
-an = Anagrammer('C:/Users/flipdog/Desktop/wordtools/bjflavors.txt', newest_letter_map)
+# an = Anagrammer('C:/Users/flipdog/Desktop/wordtools/bjflavors.txt', newest_letter_map)
 #main()
 """
 cities = []
@@ -302,3 +226,10 @@ def doubletrans(word):
         for letter in extension:
             extension_string = extension_string + letter
         transdeletion(word)
+
+
+def product(arr):
+    result = 1
+    for x in arr:
+        result *= x
+    return result
