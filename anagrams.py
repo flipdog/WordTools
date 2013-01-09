@@ -3,7 +3,7 @@ import re
 import itertools
 import cPickle as pickle
 from Tree import Tree
-# import frequencies
+import frequencies
 
 newest_letter_map = {'A': 2, 'C': 5, 'B': 3, 'E': 11, 'D': 7, 'G': 17, 'F': 13, 'I': 23, 'H': 19, 'K': 31, 'J': 29, 'M': 41, 'L': 37, 'O': 47, 'N': 43, 'Q': 59, 'P': 53, 'S': 67, 'R': 61, 'U': 73, 'T': 71, 'W': 83, 'V': 79, 'Y': 97, 'X': 89, 'Z': 101}
 
@@ -231,13 +231,13 @@ class Anagrammer():
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
 def main():
-    an = Anagrammer('raw_data/sowpods.txt', newest_letter_map)
+    an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
     s = time()
-    f = an.all_anagrams('ORANGEJUICE')
+    f = an.all_anagrams('ACTIN')
     # print f
     print len(f)
     print time()-s
-    # print an.sorted_anagram_phrases('ORANGEJUICE')[:10]
+    print an.sorted_anagram_phrases('ACTIN')[:10]
     #for k in g:
     #    print k
     #writer = open('shakespeare_output.txt','w')
