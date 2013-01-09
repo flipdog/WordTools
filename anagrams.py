@@ -113,26 +113,31 @@ class Anagrammer():
                 pass
         return sub_dict
 
-    def subset(self, length, target):
+    def subset(self, length, target, max_phrase_len=5):
         possible_vals = self.update_sub_words(length, target)
         active_set = set([(tuple(), length)])
+        finished_set = set([])
         while True:
             mod = False
-            new_active_set = set([s for s in active_set if s[1] == 0])
+            new_active_set = set([])
             for hashes, remaining_letters in active_set:
-                assert target % product(hashes) == 0
+                if len(hashes) >= max_phrase_len:
+                    continue
                 remaining_hash = target / product(hashes)
                 for i in range(1, remaining_letters + 1):
                     if i in possible_vals:
                         for val in possible_vals[i]:
                             if remaining_hash % val == 0:
                                 new_hashes = tuple(sorted(hashes + (val,)))
-                                new_active_set.add((new_hashes, remaining_letters - i))
-                                mod = True
+                                if remaining_letters - i == 0:
+                                    finished_set.add(new_hashes)
+                                else:
+                                    new_active_set.add((new_hashes, remaining_letters - i))
+                                    mod = True
             active_set = new_active_set
             if not mod:
                 break
-        return [s[0] for s in active_set]
+        return finished_set
 
     # check if two words are anagrams - theoretically optimized
     # time is n+n+26 with usually small n
@@ -183,7 +188,7 @@ class Anagrammer():
 def main():
     s = time()
     an = Anagrammer('raw_data/sowpods.txt', newest_letter_map)
-    f = an.sorted_anagram_phrases('ORANGEJUICE')
+    f = an.sorted_anagram_phrases('ORANGEJUICEA')
     print time()-s
     print f[:50]
     #for k in g:
