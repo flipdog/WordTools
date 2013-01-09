@@ -1,46 +1,20 @@
 from __future__ import division
 from collections import defaultdict
 import re
+import cPickle as pickle
 
-raw_onegrams = defaultdict(lambda: 0)
-
-with open('raw_data/all.num.o5.txt', 'r') as f:
-    onegram_total = 0
-    for i, line in enumerate(f.readlines()):
-        if '!' in line or '&' in line:
-            continue
-        freq, word, pos, num_files = line.split(' ')
-        word = word.upper()
-        freq = int(freq)
-        raw_onegrams[word] += freq
-        onegram_total += freq
-
+with open('data/raw_onegrams.pck', 'rb') as f:
+    raw_onegrams = pickle.load(f)
+onegram_total = sum(raw_onegrams.values())
 for word in raw_onegrams:
     raw_onegrams[word] = raw_onegrams[word] / onegram_total
-
 onegrams = defaultdict(lambda: 1 / onegram_total, raw_onegrams)
 
-raw_bigrams = defaultdict(lambda: 0)
-
-with open('raw_data/bigrams.txt', 'r') as f:
-    bigram_total = 0
-    for i, line in enumerate(f.readlines()):
-        words, count = line.split('\t')
-        count = int(count)
-        if count < 5:
-            continue
-        if re.search(r'[^a-zA-Z0-9 -_]', words) or re.search(r'0[A-Z]+\.0', words):
-            continue
-        words = words.upper()
-        word0, word1 = words.split(' ')
-        raw_bigrams[(word0, word1)] += count
-        bigram_total += count
-        # if i % 10000 == 0:
-        #     print i, "/", "5612484"
-
+with open('data/raw_bigrams.pck', 'rb') as f:
+    raw_bigrams = pickle.load(f)
+bigram_total = sum(raw_bigrams.values())
 for pair in raw_bigrams:
     raw_bigrams[pair] = raw_bigrams[pair] / bigram_total
-
 bigrams = defaultdict(lambda: 1 / bigram_total, raw_bigrams)
 
 
