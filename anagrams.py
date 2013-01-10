@@ -154,7 +154,7 @@ class Anagrammer():
                                                   depth + 1)
                         if x is not None:
                             branch.append(x)
-                        active_dict[size].remove(key)
+                        # active_dict[size].remove(key)
                     if key > reduced_target:
                         break
         if len(branch) > 0:
@@ -164,19 +164,20 @@ class Anagrammer():
         self.memoization[reduced_target] = output
         return output
 
-    def traverse_tree(self,inp_tree):
+    def traverse_tree(self, inp_tree, cargo_fun=lambda x: x):
         self.complete_sets = []
-        self.traverse_tree_recursive(inp_tree,list())
+        self.traverse_tree_recursive(inp_tree, list(), cargo_fun)
         return self.complete_sets
 
-    def traverse_tree_recursive(self,inp_tree,partial):
+    def traverse_tree_recursive(self, inp_tree, partial, cargo_fun):
         if not inp_tree.isRoot():
-            partial.append(self.value_dict[inp_tree.getCargo()])
+            # partial.append(self.value_dict[inp_tree.getCargo()])
+            partial.append(cargo_fun(inp_tree.getCargo()))
         if inp_tree.isBranch():
             self.complete_sets.append(tuple(partial))
             return
         for child in inp_tree.getChildren():
-            self.traverse_tree_recursive(child,partial[:])
+            self.traverse_tree_recursive(child, partial[:], cargo_fun)
         return
 
     def tree_copy(self,src_tree):
@@ -202,59 +203,58 @@ class Anagrammer():
                 return False
         return True
 
-    def all_anagrams(self,word):
+    def create_an_tree(self, word):
         word = word.upper()
         word = re.sub(r'\s', '', word)
         value = self.word_value(word)
         length = len(word)
-        an_tree = self.subset(length,value)
-        an_list = self.traverse_tree(an_tree)
+        an_tree = self.subset(length, value)
+        return an_tree
+
+    def all_anagrams(self, word):
+        an_tree = self.create_an_tree(word)
+        an_list = self.traverse_tree(an_tree, lambda x: self.value_dict[x])
         return an_list
 
+    def create_phrase_tree(self, an_tree):
+        if an_tree.isRoot():
+            assert an_tree.getCargo() == 1, "Tree must start with value=1 at root"
+            an_tree.setCargo('')
+        return self.create_phrase_tree_recursive(an_tree)
+
+    def create_phrase_tree_recursive(self, an_tree):
+        old_children = an_tree.getChildren()
+        new_children = []
+        for c in old_children:
+            for word in self.value_dict[c.getCargo()]:
+                new_tree = self.create_phrase_tree_recursive(Tree(word, c.getChildren()))
+                new_children.append(new_tree)
+        return Tree(an_tree.getCargo(), new_children)
+
     def all_anagram_phrases(self, word):
-        anagram_sets = self.all_anagrams(word)
-        all_phrases = []
-        for ana_set in anagram_sets:
-            for sorted_ana_set in itertools.permutations(ana_set):
-                phrases = [[]]
-                for anas in sorted_ana_set:
-                    new_phrases = []
-                    for p in phrases:
-                        for a in anas:
-                            new_phrases.append(p + [a])
-                    phrases = new_phrases
-                # all_phrases.extend(phrases)
-                yield phrases
-        # return all_phrases
+        an_tree = self.create_an_tree(word)
+        phrase_tree = self.create_phrase_tree(an_tree)
+        return self.traverse_tree(phrase_tree)
 
     def sorted_anagram_phrases(self, word):
         phrases = self.all_anagram_phrases(word)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
 def main():
-    # word = 'ORANGEJUICEBOXES'
-    word = 'ORANGE'
+    word = 'ORANGEJUICEBOX'
+    # word = 'ORANGES'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
     s = time()
-    f = an.all_anagrams(word)
+    t = an.create_an_tree(word)
+    f = an.traverse_tree(t)
     # print f
-    # print len(f)
+    print len(f)
     print time()-s
-    # print an.sorted_anagram_phrases(word)[:10]
-    c = 0
-    for p in an.all_anagram_phrases(word):
-        print p
-        c += 1
-        if c >= 10:
-            break
-    #for k in g:
-    #    print k
-    #writer = open('shakespeare_output.txt','w')
-    #for k in g:
-    #    writer.write(str(k)+'\n')
-    #writer.close()
-    #f.prettyTree()
-    #an.dump_memo(an.memoization)
+
+    # print list(an.all_anagram_phrases(word))
+    # pt = an.create_phrase_tree(t)
+    # print [c.data for c in pt.getChildren()]
+    print an.sorted_anagram_phrases(word)[:10]
     return
 
 if __name__ == '__main__':
