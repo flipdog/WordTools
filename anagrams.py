@@ -237,8 +237,29 @@ class Anagrammer():
         return self.traverse_tree(phrase_tree)
 
     def sorted_anagram_phrases(self, word):
+        """
+        Exhaustive search of all anagram phrases
+        """
         phrases = self.all_anagram_phrases(word)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
+
+    def phrase_beam_search(self, word, beam_width=100):
+        an_tree = self.create_an_tree(word)
+        phrase_tree = self.create_phrase_tree(an_tree)
+        active_set = [phrase_tree]
+        finished_set = []
+        while len(active_set) > 0:
+            new_active_set = []
+            for t in active_set:
+                for c in t.getChildren():
+                    if len(c.getChildren()) == 0:
+                        finished_set.append(c)
+                    else:
+                        new_active_set.append(c)
+            new_active_set.sort(key=lambda t: frequencies.phrase_likelihood(t.getAllCargoes()[1:]), reverse=True)
+            active_set = new_active_set[:beam_width]
+        return sorted([t.getAllCargoes()[1:] for t in finished_set], key=frequencies.phrase_likelihood, reverse=True)
+
 
 def main():
     word = 'ORANGEJUICEBOX'
@@ -254,7 +275,14 @@ def main():
     # print list(an.all_anagram_phrases(word))
     # pt = an.create_phrase_tree(t)
     # print [c.data for c in pt.getChildren()]
+    s = time()
     print an.sorted_anagram_phrases(word)[:10]
+    print time() - s
+
+    s = time()
+    print an.phrase_beam_search(word)[:10]
+    print time() - s
+
     return
 
 if __name__ == '__main__':
