@@ -110,82 +110,83 @@ class Anagrammer():
                     sub_dict[i].sort()
         return sub_dict
 
-    # find all sets of hash keys that can make the target key
-    def subset(self,length,target):
-        active_dict = self.update_sub_words(length, target) # <0.04s every time
-        self.count = 0
-        return self.subset_recursive(length, target, 1, active_dict, 1)
+    # # find all sets of hash keys that can make the target key
+    # def subset(self,length,target):
+    #     active_dict = self.update_sub_words(length, target) # <0.04s every time
+    #     self.count = 0
+    #     return self.subset_recursive(length, target, 1, active_dict, 1)
 
-    def key_copy(self,inp_dict):
-        out = {}
-        for k,v in inp_dict.iteritems():
-            try:
-                out[k] = v[:]
-            except TypeError:
-                out[k] = v
-        return out
+    # def key_copy(self,inp_dict):
+    #     out = {}
+    #     for k,v in inp_dict.iteritems():
+    #         try:
+    #             out[k] = v[:]
+    #         except TypeError:
+    #             out[k] = v
+    #     return out
 
-    # recursive helper for the previous function
-    def subset_recursive(self,remaining,current_target,passed_key,active_dict,depth):
-        self.count += 1
-        if passed_key == current_target:
-            if remaining == 0:
-                return Tree(passed_key)
-            return None
-        if passed_key > current_target or remaining == 0:
-            return None
-        reduced_target = current_target / passed_key
-        if reduced_target in self.memoization:
-            mem = self.memoization[reduced_target]
-            if mem == None:
-                return None
-            out = self.tree_copy(mem)
-            out.setCargo(passed_key)
-            return out
-        branch = []
-        for size in range(2, remaining + 1):
-            if size in active_dict and (remaining - size > size - 1 or remaining - size == 0):
-                for key in active_dict[size][:]:
-                    if reduced_target % key == 0:
-                        x = self.subset_recursive(remaining - size,
-                                                  reduced_target,
-                                                  key,
-                                                  self.key_copy(active_dict),
-                                                  depth + 1)
-                        if x is not None:
-                            branch.append(x)
-                        # active_dict[size].remove(key)
-                    if key > reduced_target:
-                        break
-        if len(branch) > 0:
-                output = Tree(passed_key, branch)
-        else:
-            output = None
-        self.memoization[reduced_target] = output
-        return output
 
-    def traverse_tree(self, inp_tree, cargo_fun=lambda x: x):
+    # # recursive helper for the previous function
+    # def subset_recursive(self,remaining,current_target,passed_key,active_dict,depth):
+    #     self.count += 1
+    #     if passed_key == current_target:
+    #         if remaining == 0:
+    #             return Tree(passed_key)
+    #         return None
+    #     if passed_key > current_target or remaining == 0:
+    #         return None
+    #     reduced_target = current_target / passed_key
+    #     if reduced_target in self.memoization:
+    #         mem = self.memoization[reduced_target]
+    #         if mem == None:
+    #             return None
+    #         out = self.tree_copy(mem)
+    #         out.setCargo(passed_key)
+    #         return out
+    #     branch = []
+    #     for size in range(2, remaining + 1):
+    #         if size in active_dict and (remaining - size > size - 1 or remaining - size == 0):
+    #             for key in active_dict[size][:]:
+    #                 if reduced_target % key == 0:
+    #                     x = self.subset_recursive(remaining - size,
+    #                                               reduced_target,
+    #                                               key,
+    #                                               self.key_copy(active_dict),
+    #                                               depth + 1)
+    #                     if x is not None:
+    #                         branch.append(x)
+    #                     # active_dict[size].remove(key)
+    #                 if key > reduced_target:
+    #                     break
+    #     if len(branch) > 0:
+    #             output = Tree(passed_key, branch)
+    #     else:
+    #         output = None
+    #     self.memoization[reduced_target] = output
+    #     return output
+
+    def traverse_tree(self, inp_tree):
         self.complete_sets = []
-        self.traverse_tree_recursive(inp_tree, list(), cargo_fun)
+        self.traverse_tree_recursive(inp_tree, list())
         return self.complete_sets
 
-    def traverse_tree_recursive(self, inp_tree, partial, cargo_fun):
-        if not inp_tree.isRoot():
+    def traverse_tree_recursive(self, inp_tree, partial):
+        # print "traversing at:", partial, inp_tree.getCargo()
+        # if not inp_tree.isRoot():
             # partial.append(self.value_dict[inp_tree.getCargo()])
-            partial.append(cargo_fun(inp_tree.getCargo()))
-        if inp_tree.isBranch():
+        if not inp_tree.getCargo()[0] == "":
+            partial.append(inp_tree.getCargo()[0])
+        if inp_tree.getCargo()[2] == 0:
+            # print "adding phrase:", partial
             self.complete_sets.append(tuple(partial))
             return
-        for child in inp_tree.getChildren():
-            self.traverse_tree_recursive(child, partial[:], cargo_fun)
+        if inp_tree.getCargo()[1] in self.memoization:
+            for child in self.memoization[inp_tree.getCargo()[1]]:
+                self.traverse_tree_recursive(child, partial[:])
+        else:
+            for child in inp_tree.getChildren():
+                self.traverse_tree_recursive(child, partial[:])
         return
-
-    def tree_copy(self,src_tree):
-        new_tree = Tree(src_tree.data)
-        for child in src_tree.getChildren():
-            c = self.tree_copy(child)
-            new_tree.addChild(c)
-        return new_tree
 
     # check if two words are anagrams - theoretically optimized
     # time is n+n+26 with usually small n
@@ -203,37 +204,10 @@ class Anagrammer():
                 return False
         return True
 
-    def create_an_tree(self, word):
-        word = word.upper()
-        word = re.sub(r'\s', '', word)
-        value = self.word_value(word)
-        length = len(word)
-        an_tree = self.subset(length, value)
-        return an_tree
-
-    def all_anagrams(self, word):
-        an_tree = self.create_an_tree(word)
-        an_list = self.traverse_tree(an_tree, lambda x: self.value_dict[x])
-        return an_list
-
-    def create_phrase_tree(self, an_tree):
-        if an_tree.isRoot():
-            assert an_tree.getCargo() == 1, "Tree must start with value=1 at root"
-            an_tree.setCargo('')
-        return self.create_phrase_tree_recursive(an_tree)
-
-    def create_phrase_tree_recursive(self, an_tree):
-        old_children = an_tree.getChildren()
-        new_children = []
-        for c in old_children:
-            for word in self.value_dict[c.getCargo()]:
-                new_tree = self.create_phrase_tree_recursive(Tree(word, c.getChildren()))
-                new_children.append(new_tree)
-        return Tree(an_tree.getCargo(), new_children)
-
     def all_anagram_phrases(self, word):
-        an_tree = self.create_an_tree(word)
-        phrase_tree = self.create_phrase_tree(an_tree)
+        # an_tree = self.create_an_tree(word)
+        # phrase_tree = self.create_phrase_tree(an_tree)
+        phrase_tree = self.phrase_tree(word)
         return self.traverse_tree(phrase_tree)
 
     def sorted_anagram_phrases(self, word):
@@ -243,34 +217,88 @@ class Anagrammer():
         phrases = self.all_anagram_phrases(word)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
-    def phrase_beam_search(self, word, beam_width=100):
-        an_tree = self.create_an_tree(word)
-        phrase_tree = self.create_phrase_tree(an_tree)
-        active_set = [phrase_tree]
-        finished_set = []
+    # def phrase_beam_search(self, word, beam_width=10):
+    #     an_tree = self.create_an_tree(word)
+    #     phrase_tree = self.create_phrase_tree(an_tree)
+    #     active_set = [phrase_tree]
+    #     finished_set = []
+    #     while len(active_set) > 0:
+    #         new_active_set = []
+    #         for t in active_set:
+    #             for c in t.getChildren():
+    #                 if len(c.getChildren()) == 0:
+    #                     finished_set.append(c)
+    #                 else:
+    #                     new_active_set.append(c)
+    #         new_active_set.sort(key=lambda t: frequencies.phrase_likelihood(t.getAllCargoes()[1:]), reverse=True)
+    #         active_set = new_active_set[:beam_width]
+    #     return sorted([t.getAllCargoes()[1:] for t in finished_set], key=frequencies.phrase_likelihood, reverse=True)
+
+    def tree_copy(self,src_tree):
+        new_tree = Tree(src_tree.data)
+        for child in src_tree.getChildren():
+            c = self.tree_copy(child)
+            new_tree.addChild(c)
+        return new_tree
+
+    def phrase_tree(self, word):
+        self.memoization = {}
+        word = word.upper()
+        word = re.sub(r'\s', '', word)
+        target = self.word_value(word)
+        length = len(word)
+        active_dict = self.update_sub_words(length, target)
+        root_tree = Tree(('', target, length))
+        active_set = [root_tree]
         while len(active_set) > 0:
-            new_active_set = []
+            new_layer = []
             for t in active_set:
-                for c in t.getChildren():
-                    if len(c.getChildren()) == 0:
-                        finished_set.append(c)
-                    else:
-                        new_active_set.append(c)
-            new_active_set.sort(key=lambda t: frequencies.phrase_likelihood(t.getAllCargoes()[1:]), reverse=True)
-            active_set = new_active_set[:beam_width]
-        return sorted([t.getAllCargoes()[1:] for t in finished_set], key=frequencies.phrase_likelihood, reverse=True)
+                word, reduced_target, remaining_letters = t.getCargo()
+                # print "expanding:", [x[0] for x in t.getAllCargoes()], reduced_target
+                if remaining_letters == 0:
+                    # print "done"
+                    continue
+                elif reduced_target in self.memoization:
+                    # print "cache hit:", [x.data[0] for x in self.memoization[reduced_target]]
+                    continue
+                else:
+                    for size in range(2, remaining_letters + 1):
+                        if size in active_dict:
+                            for key in active_dict[size]:
+                                if reduced_target % key == 0:
+                                    new_children = [Tree((w, reduced_target / key, remaining_letters - size)) for w in self.value_dict[key]]
+                                    t.addChildren(new_children)
+                                    new_layer.extend(new_children)
+                    self.memoization[reduced_target] = t.getChildren()
+                # print "children after expansion:", [x.data[0] for x in t.getChildren()]
+                # self.prune_upward(t, length)
+            active_set = new_layer
+        return root_tree
+
+    def prune_upward(self, tree, length):
+        if tree.isRoot():
+            return False
+        word, reduced_target, remaining_letters = tree.getCargo()
+        if remaining_letters != 0 and len(tree.getChildren()) == 0:
+            if tree in tree.getParent().getChildren():
+                tree.getParent().getChildren().remove(tree)
+            self.prune_upward(tree.getParent(), length)
+            return True
+        return False
 
 
 def main():
+    # word = 'ACTIN'
+    # word = 'ATITAT'
     word = 'ORANGEJUICEBOX'
-    # word = 'ORANGES'
+    # word = 'ORANGEA'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
-    s = time()
-    t = an.create_an_tree(word)
-    f = an.traverse_tree(t)
-    # print f
-    print len(f)
-    print time()-s
+    # s = time()
+    # t = an.create_an_tree(word)
+    # f = an.traverse_tree(t)
+    # # print f
+    # print len(f)
+    # print time()-s
 
     # print list(an.all_anagram_phrases(word))
     # pt = an.create_phrase_tree(t)
@@ -279,9 +307,9 @@ def main():
     print an.sorted_anagram_phrases(word)[:10]
     print time() - s
 
-    s = time()
-    print an.phrase_beam_search(word)[:10]
-    print time() - s
+    # s = time()
+    # print an.phrase_beam_search(word)
+    # print time() - s
 
     return
 
