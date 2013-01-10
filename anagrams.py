@@ -204,17 +204,18 @@ class Anagrammer():
                 return False
         return True
 
-    def all_anagram_phrases(self, word):
-        # an_tree = self.create_an_tree(word)
-        # phrase_tree = self.create_phrase_tree(an_tree)
-        phrase_tree = self.phrase_tree(word)
+    def all_anagram_phrases(self, phrase_tree):
         return self.traverse_tree(phrase_tree)
 
-    def sorted_anagram_phrases(self, word):
+    def sorted_anagram_phrases(self, word, beam_width=1000):
         """
         Exhaustive search of all anagram phrases
         """
-        phrases = self.all_anagram_phrases(word)
+        phrase_tree = self.phrase_tree(word, beam_width)
+        return self.sort_phrase_tree(phrase_tree)
+
+    def sort_phrase_tree(self, phrase_tree):
+        phrases = self.all_anagram_phrases(phrase_tree)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
     # def phrase_beam_search(self, word, beam_width=10):
@@ -241,7 +242,7 @@ class Anagrammer():
             new_tree.addChild(c)
         return new_tree
 
-    def phrase_tree(self, word):
+    def phrase_tree(self, word, beam_width=1000):
         self.memoization = {}
         word = word.upper()
         word = re.sub(r'\s', '', word)
@@ -272,25 +273,27 @@ class Anagrammer():
                     self.memoization[reduced_target] = t.getChildren()
                 # print "children after expansion:", [x.data[0] for x in t.getChildren()]
                 # self.prune_upward(t, length)
-            active_set = new_layer
+            new_layer.sort(key=lambda t: frequencies.phrase_likelihood([c[0] for c in t.getAllCargoes()[1:]]), reverse=True)
+            active_set = new_layer[:beam_width]
         return root_tree
 
-    def prune_upward(self, tree, length):
-        if tree.isRoot():
-            return False
-        word, reduced_target, remaining_letters = tree.getCargo()
-        if remaining_letters != 0 and len(tree.getChildren()) == 0:
-            if tree in tree.getParent().getChildren():
-                tree.getParent().getChildren().remove(tree)
-            self.prune_upward(tree.getParent(), length)
-            return True
-        return False
+    # def prune_upward(self, tree, length):
+    #     if tree.isRoot():
+    #         return False
+    #     word, reduced_target, remaining_letters = tree.getCargo()
+    #     if remaining_letters != 0 and len(tree.getChildren()) == 0:
+    #         if tree in tree.getParent().getChildren():
+    #             tree.getParent().getChildren().remove(tree)
+    #         self.prune_upward(tree.getParent(), length)
+    #         return True
+    #     return False
 
 
 def main():
     # word = 'ACTIN'
     # word = 'ATITAT'
-    word = 'ORANGEJUICEBOX'
+    # word = 'ORANGEJUICEBOXES'
+    word = 'WILLIAMSHAKESPEARE'
     # word = 'ORANGEA'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
     # s = time()
@@ -304,7 +307,13 @@ def main():
     # pt = an.create_phrase_tree(t)
     # print [c.data for c in pt.getChildren()]
     s = time()
-    print an.sorted_anagram_phrases(word)[:10]
+    phrase_tree = an.phrase_tree(word, beam_width=100)
+    print "made phrase tree"
+    print time() - s
+
+    s = time()
+    top_phrases = an.sorted_anagram_phrases(word, beam_width=100)[:10]
+    print top_phrases
     print time() - s
 
     # s = time()
