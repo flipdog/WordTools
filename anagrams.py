@@ -223,21 +223,30 @@ class Anagrammer():
                         for a in anas:
                             new_phrases.append(p + [a])
                     phrases = new_phrases
-                all_phrases.extend(phrases)
-        return all_phrases
+                # all_phrases.extend(phrases)
+                yield phrases
+        # return all_phrases
 
     def sorted_anagram_phrases(self, word):
         phrases = self.all_anagram_phrases(word)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
 
 def main():
+    # word = 'ORANGEJUICEBOXES'
+    word = 'ORANGE'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
     s = time()
-    f = an.all_anagrams('ACTIN')
+    f = an.all_anagrams(word)
     # print f
-    print len(f)
+    # print len(f)
     print time()-s
-    print an.sorted_anagram_phrases('ACTIN')[:10]
+    # print an.sorted_anagram_phrases(word)[:10]
+    c = 0
+    for p in an.all_anagram_phrases(word):
+        print p
+        c += 1
+        if c >= 10:
+            break
     #for k in g:
     #    print k
     #writer = open('shakespeare_output.txt','w')
