@@ -4,6 +4,7 @@ import itertools
 import cPickle as pickle
 from Tree import Tree
 import frequencies
+import sys
 
 newest_letter_map = {'A': 2, 'C': 5, 'B': 3, 'E': 11, 'D': 7, 'G': 17, 'F': 13, 'I': 23, 'H': 19, 'K': 31, 'J': 29, 'M': 41, 'L': 37, 'O': 47, 'N': 43, 'Q': 59, 'P': 53, 'S': 67, 'R': 61, 'U': 73, 'T': 71, 'W': 83, 'V': 79, 'Y': 97, 'X': 89, 'Z': 101}
 
@@ -22,12 +23,11 @@ class Anagrammer():
         self.word_dict = {}
         self.value_dict = {}
         self.read_dictionary(dictionary_file)
-        self.memoization = {} #self.load_memo()
-
+        self.memoization = {}  # self.load_memo()
 
     def load_memo(self):
         try:
-            p = open('memoize.p','rb')
+            p = open('memoize.p', 'rb')
             memo = pickle.load(p)
             p.close()
             return memo
@@ -35,6 +35,7 @@ class Anagrammer():
             return None
 
     def dump_memo(self,memo):
+        print foo
         try:
             p = open('memoize.p','wb')
             pickle.dump(memo,p)
@@ -79,7 +80,6 @@ class Anagrammer():
             self.value_dict[value] = []
             self.value_dict[value].append(word)
 
-
     def word_value(self, word):
         word = word.upper()
         word = re.sub(r'\s', '', word)
@@ -110,84 +110,6 @@ class Anagrammer():
                     sub_dict[i].sort()
         return sub_dict
 
-    # # find all sets of hash keys that can make the target key
-    # def subset(self,length,target):
-    #     active_dict = self.update_sub_words(length, target) # <0.04s every time
-    #     self.count = 0
-    #     return self.subset_recursive(length, target, 1, active_dict, 1)
-
-    # def key_copy(self,inp_dict):
-    #     out = {}
-    #     for k,v in inp_dict.iteritems():
-    #         try:
-    #             out[k] = v[:]
-    #         except TypeError:
-    #             out[k] = v
-    #     return out
-
-
-    # # recursive helper for the previous function
-    # def subset_recursive(self,remaining,current_target,passed_key,active_dict,depth):
-    #     self.count += 1
-    #     if passed_key == current_target:
-    #         if remaining == 0:
-    #             return Tree(passed_key)
-    #         return None
-    #     if passed_key > current_target or remaining == 0:
-    #         return None
-    #     reduced_target = current_target / passed_key
-    #     if reduced_target in self.memoization:
-    #         mem = self.memoization[reduced_target]
-    #         if mem == None:
-    #             return None
-    #         out = self.tree_copy(mem)
-    #         out.setCargo(passed_key)
-    #         return out
-    #     branch = []
-    #     for size in range(2, remaining + 1):
-    #         if size in active_dict and (remaining - size > size - 1 or remaining - size == 0):
-    #             for key in active_dict[size][:]:
-    #                 if reduced_target % key == 0:
-    #                     x = self.subset_recursive(remaining - size,
-    #                                               reduced_target,
-    #                                               key,
-    #                                               self.key_copy(active_dict),
-    #                                               depth + 1)
-    #                     if x is not None:
-    #                         branch.append(x)
-    #                     # active_dict[size].remove(key)
-    #                 if key > reduced_target:
-    #                     break
-    #     if len(branch) > 0:
-    #             output = Tree(passed_key, branch)
-    #     else:
-    #         output = None
-    #     self.memoization[reduced_target] = output
-    #     return output
-
-    def traverse_tree(self, inp_tree):
-        self.complete_sets = []
-        self.traverse_tree_recursive(inp_tree, list())
-        return self.complete_sets
-
-    def traverse_tree_recursive(self, inp_tree, partial):
-        # print "traversing at:", partial, inp_tree.getCargo()
-        # if not inp_tree.isRoot():
-            # partial.append(self.value_dict[inp_tree.getCargo()])
-        if not inp_tree.getCargo()[0] == "":
-            partial.append(inp_tree.getCargo()[0])
-        if inp_tree.getCargo()[2] == 0:
-            # print "adding phrase:", partial
-            self.complete_sets.append(tuple(partial))
-            return
-        if inp_tree.getCargo()[1] in self.memoization:
-            for child in self.memoization[inp_tree.getCargo()[1]]:
-                self.traverse_tree_recursive(child, partial[:])
-        else:
-            for child in inp_tree.getChildren():
-                self.traverse_tree_recursive(child, partial[:])
-        return
-
     # check if two words are anagrams - theoretically optimized
     # time is n+n+26 with usually small n
     # effectively constant time <100
@@ -204,43 +126,9 @@ class Anagrammer():
                 return False
         return True
 
-    def all_anagram_phrases(self, phrase_tree):
-        return self.traverse_tree(phrase_tree)
-
     def sorted_anagram_phrases(self, word, beam_width=1000):
-        """
-        Exhaustive search of all anagram phrases
-        """
-        phrase_tree = self.phrase_tree(word, beam_width)
-        return self.sort_phrase_tree(phrase_tree)
-
-    def sort_phrase_tree(self, phrase_tree):
-        phrases = self.all_anagram_phrases(phrase_tree)
+        phrases = self.phrase_tree(word, beam_width)
         return sorted(phrases, key=frequencies.phrase_likelihood, reverse=True)
-
-    # def phrase_beam_search(self, word, beam_width=10):
-    #     an_tree = self.create_an_tree(word)
-    #     phrase_tree = self.create_phrase_tree(an_tree)
-    #     active_set = [phrase_tree]
-    #     finished_set = []
-    #     while len(active_set) > 0:
-    #         new_active_set = []
-    #         for t in active_set:
-    #             for c in t.getChildren():
-    #                 if len(c.getChildren()) == 0:
-    #                     finished_set.append(c)
-    #                 else:
-    #                     new_active_set.append(c)
-    #         new_active_set.sort(key=lambda t: frequencies.phrase_likelihood(t.getAllCargoes()[1:]), reverse=True)
-    #         active_set = new_active_set[:beam_width]
-    #     return sorted([t.getAllCargoes()[1:] for t in finished_set], key=frequencies.phrase_likelihood, reverse=True)
-
-    def tree_copy(self,src_tree):
-        new_tree = Tree(src_tree.data)
-        for child in src_tree.getChildren():
-            c = self.tree_copy(child)
-            new_tree.addChild(c)
-        return new_tree
 
     def phrase_tree(self, word, beam_width=1000):
         self.memoization = {}
@@ -251,14 +139,14 @@ class Anagrammer():
         active_dict = self.update_sub_words(length, target)
         root_tree = Tree(('', target, length))
         active_set = [root_tree]
+        finished_set = []
         while len(active_set) > 0:
             new_layer = []
             for t in active_set:
                 word, reduced_target, remaining_letters = t.getCargo()
                 # print "expanding:", [x[0] for x in t.getAllCargoes()], reduced_target
                 if remaining_letters == 0:
-                    # print "done"
-                    continue
+                    finished_set.append([c[0] for c in t.getAllCargoes()[1:]])
                 elif reduced_target in self.memoization:
                     # print "cache hit:", [x.data[0] for x in self.memoization[reduced_target]]
                     continue
@@ -275,51 +163,22 @@ class Anagrammer():
                 # self.prune_upward(t, length)
             new_layer.sort(key=lambda t: frequencies.phrase_likelihood([c[0] for c in t.getAllCargoes()[1:]]), reverse=True)
             active_set = new_layer[:beam_width]
-        return root_tree
-
-    # def prune_upward(self, tree, length):
-    #     if tree.isRoot():
-    #         return False
-    #     word, reduced_target, remaining_letters = tree.getCargo()
-    #     if remaining_letters != 0 and len(tree.getChildren()) == 0:
-    #         if tree in tree.getParent().getChildren():
-    #             tree.getParent().getChildren().remove(tree)
-    #         self.prune_upward(tree.getParent(), length)
-    #         return True
-    #     return False
+        return finished_set
 
 
 def main():
-    # word = 'ACTIN'
-    # word = 'ATITAT'
     # word = 'ORANGEJUICEBOXES'
-    word = 'WILLIAMSHAKESPEARE'
-    # word = 'ORANGEA'
+    word = sys.argv[1]
+    if len(sys.argv) > 2:
+        beam_width = int(sys.argv[2])
+    else:
+        beam_width = 1000
+    # word = 'WILLIAMSHAKESPEARE'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
-    # s = time()
-    # t = an.create_an_tree(word)
-    # f = an.traverse_tree(t)
-    # # print f
-    # print len(f)
-    # print time()-s
-
-    # print list(an.all_anagram_phrases(word))
-    # pt = an.create_phrase_tree(t)
-    # print [c.data for c in pt.getChildren()]
-    s = time()
-    phrase_tree = an.phrase_tree(word, beam_width=100)
-    print "made phrase tree"
-    print time() - s
 
     s = time()
-    top_phrases = an.sorted_anagram_phrases(word, beam_width=100)[:10]
-    print top_phrases
+    print an.sorted_anagram_phrases(word, beam_width=beam_width)
     print time() - s
-
-    # s = time()
-    # print an.phrase_beam_search(word)
-    # print time() - s
-
     return
 
 if __name__ == '__main__':
