@@ -172,12 +172,12 @@ def main():
     if len(sys.argv) > 2:
         beam_width = int(sys.argv[2])
     else:
-        beam_width = 1000
+        beam_width = 10000
     # word = 'WILLIAMSHAKESPEARE'
     an = Anagrammer('raw_data/2of12inf.txt', newest_letter_map)
 
     s = time()
-    print an.sorted_anagram_phrases(word, beam_width=beam_width)
+    print an.sorted_anagram_phrases(word, beam_width=beam_width)[:30]
     print time() - s
     return
 
